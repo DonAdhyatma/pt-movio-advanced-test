@@ -1,65 +1,129 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+import BriefForm from "@/components/BriefForm";
+import OutputPanel from "@/components/OutputPanel";
+import { BriefInput, ContentOutput } from "@/lib/gemini";
 
 export default function Home() {
+  const [output, setOutput] = useState<ContentOutput | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [brandName, setBrandName] = useState<string>("");
+
+  const handleGenerate = async (brief: BriefInput) => {
+    setIsLoading(true);
+    setError(null);
+    setBrandName(brief.brandName);
+
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(brief),
+      });
+
+      const json = await res.json();
+
+      if (!res.ok) throw new Error(json.error || "Generation failed");
+
+      setOutput(json.data);
+
+      // Save to localStorage history
+      const history = JSON.parse(
+        localStorage.getItem("movio_history") || "[]"
+      );
+      history.unshift({
+        id: Date.now(),
+        brandName: brief.brandName,
+        platform: brief.platform,
+        goal: brief.goal,
+        output: json.data,
+        createdAt: new Date().toISOString(),
+      });
+      localStorage.setItem(
+        "movio_history",
+        JSON.stringify(history.slice(0, 10))
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="app-shell">
+      {/* Navbar */}
+      <nav className="navbar">
+        <div className="nav-logo">
+          <span className="logo-mark">▦</span>
+          <span className="logo-text">Movio</span>
+          <span className="logo-tag">Smart Content Builder</span>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div className="nav-badge">
+          Powered by Gemini 2.5 Flash Lite
         </div>
-      </main>
-    </div>
+      </nav>
+
+      {/* Hero */}
+      <section className="hero">
+        <div className="hero-chip">AI-Powered Creative Platform</div>
+        <h1 className="hero-title">
+          Generate Campaign Content
+          <br />
+          <span className="hero-accent">in Seconds, Not Hours</span>
+        </h1>
+        <p className="hero-sub">
+          Fill your creative brief → Let Gemini AI craft captions, scripts,
+          storyboards, poster concepts, and hashtags — ready to pitch.
+        </p>
+      </section>
+
+      {/* Main Layout */}
+      <div className="workspace">
+        {/* Left: Form */}
+        <section className="panel panel-form">
+          <div className="panel-label">
+            <span className="panel-step">01</span>
+            Creative Brief
+          </div>
+          <BriefForm onSubmit={handleGenerate} isLoading={isLoading} />
+        </section>
+
+        {/* Divider */}
+        <div className="workspace-divider">
+          <div className="divider-line" />
+          <div className="divider-icon">✦</div>
+          <div className="divider-line" />
+        </div>
+
+        {/* Right: Output */}
+        <section className="panel panel-output">
+          <div className="panel-label">
+            <span className="panel-step">02</span>
+            Generated Content
+          </div>
+          {error && (
+            <div className="error-banner">
+              ⚠ {error}
+            </div>
+          )}
+          <OutputPanel
+            output={output}
+            isLoading={isLoading}
+            briefName={brandName}
+          />
+        </section>
+      </div>
+
+      {/* Footer */}
+      <footer className="app-footer">
+        <p>
+          Movio Smart Content Builder · Built with Next.js 16 + Gemini AI ·
+          By Danni A. Rachman
+        </p>
+      </footer>
+    </main>
   );
 }
