@@ -38,7 +38,7 @@ This project was built as part of the **Creative Technology Generalist Internshi
 
 ## 🚀 Live Demo
 
-🔗 **[pt-movio-advanced-test.vercel.app](pt-movio-advanced-test.vercel.app)**
+🔗 **[pt-movio-advanced-test.vercel.app](https://pt-movio-advanced-test.vercel.app/)**
 
 ---
 
